@@ -1,19 +1,90 @@
-# InstructPix2Pix: Learning to Follow Image Editing Instructions
-### [Project Page](https://www.timothybrooks.com/instruct-pix2pix/) | [Paper](https://arxiv.org/abs/2211.09800) | [Data](http://instruct-pix2pix.eecs.berkeley.edu/)
-PyTorch implementation of InstructPix2Pix, an instruction-based image editing model, based on the original [CompVis/stable_diffusion](https://github.com/CompVis/stable-diffusion) repo. <br>
+# Fast InstructPix2Pix using Distilled Text-conditional Diffusion Models
+<a href="https://huggingface.co/spaces/dbaranchuk/instruct-p2p-distill">
+	    <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Demo-Editing-orange' />
+</a>&nbsp;
 
-[InstructPix2Pix: Learning to Follow Image Editing Instructions](https://www.timothybrooks.com/instruct-pix2pix/)  
- [Tim Brooks](https://www.timothybrooks.com/)\*,
- [Aleksander Holynski](https://holynski.org/)\*,
- [Alexei A. Efros](https://people.eecs.berkeley.edu/~efros/) <br>
- UC Berkeley <br>
-  \*denotes equal contribution  
-  
-  <img src='https://instruct-pix2pix.timothybrooks.com/teaser.jpg'/>
+<p align="center">
+<img src="imgs/0.jpg" width="1080px"/>
+</p>
+
+> <i>Overview</i> <br> 
+> InstructPix2Pix is a powerful AI-driven tool for interactive image editing, allowing users to modify an existing image based on textual instructions. This model builds on the strengths of diffusion models and employs fine-tuning for nuanced edits. Here's how it works and how you can use it effectively:
+
+<i>Architecture</i> <br> 
+
+>The InstructPix2Pix architecture builds upon diffusion models, which are popular in generative image tasks. It modifies and extends the standard image-to-image translation paradigm by incorporating instruction-conditioned fine-tuning and a diffusion-based generative model. Specifically, it extends the principles of image generation and editing using a text-conditioned approach. Here's an overview of the architecture and its components:
+
+<i>Base Diffusion Model:</i> <br>
+
+ > The foundation of InstructPix2Pix is built upon pre-trained diffusion models, which are probabilistic generative models designed to generate high-quality images by reversing a noise diffusion process.
+
+> Diffusion models learn to reverse a noise process applied to images, progressively denoising them until they generate coherent images or edits.
+
+Conditioning with Text Instructions:
+
+The model is conditioned on both the original image and the text instruction.
+Text Embeddings: A pre-trained language model, such as CLIP or T5, is used to encode the text instructions.
+Image Features: A feature extractor (like a Vision Transformer or CNN) processes the input image to provide spatial and content-aware embeddings.
+
+Cross-Attention Mechanism:
+
+A cross-attention mechanism links the latent representation of the input image with the text embeddings from the instruction.
+This ensures that the edits are contextually relevant to the textual input while preserving the original image's structure.
+
+The model undergoes fine-tuning on an instruction-image-edit dataset.
+
+Training
+This training involves learning how to adjust image features based on specific, high-level textual commands, rather than purely stylistic or random transformations.
+The editing process occurs in a modified U-Net architecture within the diffusion model.
+The U-Net incorporates:
+Cross-Attention Layers: To integrate the text embeddings with the image features.
+Skip Connections: To preserve high-frequency details and structural integrity from the input image.
+Learned Modifications: The model learns how to apply changes selectively, guided by the text input.
+InstructPix2Pix is fine-tuned on a dataset of before-and-after image pairs with corresponding text instructions. 
+This allows the model to learn nuanced relationships between textual descriptions and visual changes.
+
+Latent Space Editing:
+
+Images are encoded into a latent space using an encoder.
+The latent representation is modified based on the text instruction, ensuring that changes are applied semantically rather than pixel-by-pixel.
+
+Iterative Denoising
+
+Similar to other diffusion models, the editing is achieved via iterative steps:
+Noise is added to the input image.
+Guided denoising is performed, conditioned on the text instruction, to reach the modified image.
+
+
+> **Recent distillation approaches could significantly accerate the inference of text-conditional diffusion models.
+> Here, we demonstrate that the distilled models can be readily combined with the high-end image editing approach, [InstructPix2Pix](https://github.com/timothybrooks/instruct-pix2pix/tree/main), 
+> without any training.
+> We adapt the InstructPix2Pix models based on [Stable Diffusion v1.5](https://arxiv.org/abs/2112.10752) and [Stable Diffusion XL](https://arxiv.org/abs/2307.01952) 
+> using the pretrained [Latent Consistency Models](https://arxiv.org/abs/2310.04378)
+> and [Adversarial Diffusion Distillation](https://arxiv.org/abs/2311.17042).
+> The final pipeline performs the text-guided image editing for 4-5 steps without noticeable quality degradation.**
+>
+> <i>How does it work?</i> <br>
+> 
+> **The InstructPix2Pix parameters are updated according to $`W^{*}_{IP2P} = W_{IP2P} + \Delta W`$, where
+> $`\Delta W = W_{1} - W_{0}`$. $`W_0`$ are the base diffusion model parameters, e.g., SD1.5 or SDXL, and
+> $`W_1`$ are the parameters of the corresponding distilled version.**
+> 
+> **Also, $`\Delta W`$ can be obtained using LoRA adapters.
+> First, the diffusion model is distilled into LoRA, 
+> $`W_{1} = W_{0} + \Delta W_{LoRA}`$, that is usually added to the attention layers only.
+> Then, we can adapt InstructPix2Pix using $`\Delta W = \Delta W_{LoRA}`$.
+> Note that, in our experiments, InstructPix2Pix-XL performs much better using the fully parametrized distilled models for adaptation.**
+>
+> *The inference times are measured on a single NVIDIA-A100.
+
+To run the code below, install [diffusers](https://github.com/huggingface/diffusers).
+```Python
+pip install diffusers==0.23.1
+```
 
 ## TL;DR: quickstart 
 
-Follow the instructions below to download and run InstructPix2Pix on your own images. These instructions have been tested on a GPU with >18GB VRAM. If you don't have a GPU, you may need to change the default configuration, or check out [other ways of using the model](https://github.com/timothybrooks/instruct-pix2pix#other-ways-of-using-instructpix2pix). 
+Follow the instructions below to download and run InstructPix2Pix on your own images. These instructions have been tested on a GPU with >18GB VRAM. If you don't have a GPU, you may need to change the default configuratio.
 
 ### Set up a conda environment, and download a pretrained model:
 ```
@@ -175,81 +246,174 @@ To generate plots like the ones in Figures 8 and 10 in the paper, run the follow
 
 ```
 python metrics/compute_metrics.py --ckpt /path/to/your/model.ckpt
-```
-
-## Tips
-
-If you're not getting the quality result you want, there may be a few reasons:
-1. **Is the image not changing enough?** Your Image CFG weight may be too high. This value dictates how similar the output should be to the input. It's possible your edit requires larger changes from the original image, and your Image CFG weight isn't allowing that. Alternatively, your Text CFG weight may be too low. This value dictates how much to listen to the text instruction. The default Image CFG of 1.5 and Text CFG of 7.5 are a good starting point, but aren't necessarily optimal for each edit. Try:
-    * Decreasing the Image CFG weight, or
-    * Increasing the Text CFG weight, or
-2. Conversely, **is the image changing too much**, such that the details in the original image aren't preserved? Try:
-    * Increasing the Image CFG weight, or
-    * Decreasing the Text CFG weight
-3. Try generating results with different random seeds by setting "Randomize Seed" and running generation multiple times. You can also try setting "Randomize CFG" to sample new Text CFG and Image CFG values each time.
-4. Rephrasing the instruction sometimes improves results (e.g., "turn him into a dog" vs. "make him a dog" vs. "as a dog").
-5. Increasing the number of steps sometimes improves results.
-6. Do faces look weird? The Stable Diffusion autoencoder has a hard time with faces that are small in the image. Try cropping the image so the face takes up a larger portion of the frame.
-
-## Comments
-
-- Our codebase is based on the [Stable Diffusion codebase](https://github.com/CompVis/stable-diffusion).
-
-## BibTeX
 
 ```
+<p align="center">
+<img src="imgs/dog.jpg" width="500px"/>
+</p>
+
+You can find more examples [here](#examples-with-lcm-sd15).
+
+> <i>Recomendations</i> <br>
+> 
+> **a) Turn off ```image_guidance_scale``` (set to ```1```). Otherwise, it will cause artifacts.** <br>
+> **b) Vary ```guidance_scale``` between ```1``` and ```3```. The larger values can potentially lead to more artifacts.** <br>
+> **c) Different resolutions are suitable (e.g, ```1024```). However, ```512``` works slightly better.** <br>
+
+## Editing with LCM-XL and ADD-XL
+For SDXL, we found that [LCM-LoRA-XL](https://huggingface.co/latent-consistency/lcm-lora-sdxl) leads to 
+the unsatisfactory results, see the example below. 
+<p align="center">
+<img src="imgs/unsatis.jpg" width="700px"/>
+</p>
+
+However, we observe that the [LCM-XL](https://huggingface.co/latent-consistency/lcm-sdxl) and 
+[ADD-XL](https://huggingface.co/stabilityai/sdxl-turbo) checkpoints can be successfully used for the InstructPix2Pix-XL adaptation.
+
+1. Load an image
+
+```Python
+from diffusers.utils import load_image
+
+url = "https://hf.co/datasets/diffusers/diffusers-images-docs/resolve/main/mountain.png"
+resolution = 768
+
+init_image = load_image(url).resize((resolution, resolution))
+```
+<p align="center">
+<img src="imgs/3.jpg" width="500px"/>
+</p>
+
+2. Initialize the pipelines
+```Python
+from diffusers import DiffusionPipeline, StableDiffusionXLInstructPix2PixPipeline, AutoPipelineForText2Image
+from diffusers import UNet2DConditionModel, LCMScheduler
+
+# InstructPix2Pix-XL with LCM specified scheduler
+pipe_p2p = StableDiffusionXLInstructPix2PixPipeline.from_pretrained(
+        "diffusers/sdxl-instructpix2pix-768",
+        torch_dtype=torch.float16
+       )
+pipe_p2p = pipe_p2p.to("cuda")
+pipe_p2p.scheduler = LCMScheduler.from_config(pipe_p2p.scheduler.config)
+
+# SDXL
+pipe_sd = DiffusionPipeline.from_pretrained(
+    "stabilityai/stable-diffusion-xl-base-1.0", torch_dtype=torch.float16, variant="fp16", use_safetensors=True
+)
+pipe_sd = pipe_sd.to("cuda")
+
+# ADD-XL (SDXL-Turbo)
+pipe_turbo = AutoPipelineForText2Image.from_pretrained("stabilityai/sdxl-turbo",
+                                                 torch_dtype=torch.float16, variant="fp16")
+pipe_turbo.to("cuda")
+
+# LCM-XL
+unet = UNet2DConditionModel.from_pretrained("latent-consistency/lcm-sdxl", torch_dtype=torch.float16, variant="fp16").to("cuda")
+pipe_lcm = DiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-xl-base-1.0", unet=unet, torch_dtype=torch.float16, variant="fp16")
+pipe_lcm.scheduler = LCMScheduler.from_config(pipe_lcm.scheduler.config)
+```
+
+**Adapt InstructPix2Pix-XL**
+
+```Python
+import torch
+
+@torch.no_grad()
+def adapt(pipe_p2p, pipe_distill, pipe_sd, weight=0.5):
+    """
+    Adaptation of pipe_p2p with pipe_distill and pipe_sd inspired by LoRA adapters
+    """
+    
+    state_dict_p2p = pipe_p2p.unet.state_dict()
+    state_dict_distill = pipe_distill.unet.state_dict()
+    state_dict_sd = pipe_sd.unet.state_dict()
+    
+    for name, param in state_dict_p2p.items():
+        
+        # Skip the first layer, since it has more input channels than in the distill model.
+        if name == 'conv_in.weight':
+            continue
+        
+        # Compute weight residuals
+        W_delta = state_dict_distill[name] - state_dict_sd[name] 
+        
+        # Update parameters
+        transformed_param = param + weight * W_delta
+        param.copy_(transformed_param)
+
+# Adapt InstructPix2Pix-XL using the selected distillation method
+adapt(pipe_p2p=pipe_p2p,
+      pipe_distill=pipe_turbo, # or pipe_lcm
+      pipe_sd=pipe_sd,
+      weight=0.5) 
+```
+
+3. Run editing.
+```Python
+edit_instruction = "Make it evening"
+edited_image = pipe_p2p(
+        prompt=edit_instruction,
+        image=init_image,
+        height=resolution,
+        width=resolution,
+        num_inference_steps=5,
+        guidance_scale=2.0,
+        image_guidance_scale=1.0,
+        ).images[0]
+```
+
+<p align="center">
+<img src="imgs/4.jpg" width="700px"/>
+</p>
+
+You can find more examples [here](#examples-with-lcm-sdxl-and-add-xl).
+
+> <i>Recomendations</i> <br>
+> 
+> **a) As in the previous case, turn off ```image_guidance_scale``` (set to ```1```).** <br>
+> **b) Vary ```guidance_scale``` between ```1``` and ```3```.** <br>
+> **c) Only one resolution is suitable, ```768```. Others lead to the unsatisfactory results.** <br>
+> **d) The pipeline is highly sensitive to the ```weight``` parameter. We found that ```0.5``` is acceptable.** <br>
+> **e) InstructPix2Pix-SD1.5 works significantly better than the SDXL counterpart. Thus, we recommend using the previous pipeline.**
+
+## Examples with LCM-SD1.5
+<p align="center">
+<img src="imgs/1.jpg" width="1080px"/>
+</p>
+
+## Examples with LCM-SDXL and ADD-XL
+<p align="center">
+<img src="imgs/2.jpg" width="1080px"/>
+</p>
+
+## References
+```bibtex
 @article{brooks2022instructpix2pix,
   title={InstructPix2Pix: Learning to Follow Image Editing Instructions},
   author={Brooks, Tim and Holynski, Aleksander and Efros, Alexei A},
   journal={arXiv preprint arXiv:2211.09800},
   year={2022}
 }
+
+@article{luo2023latent,
+  title={Latent consistency models: Synthesizing high-resolution images with few-step inference},
+  author={Luo, Simian and Tan, Yiqin and Huang, Longbo and Li, Jian and Zhao, Hang},
+  journal={arXiv preprint arXiv:2310.04378},
+  year={2023}
+}
+
+@article{luo2023lcm,
+  title={Lcm-lora: A universal stable-diffusion acceleration module},
+  author={Luo, Simian and Tan, Yiqin and Patil, Suraj and Gu, Daniel and von Platen, Patrick and Passos, Apolin{\'a}rio and Huang, Longbo and Li, Jian and Zhao, Hang},
+  journal={arXiv preprint arXiv:2311.05556},
+  year={2023}
+}
+
+@article{sauer2023adversarial,
+  title={Adversarial Diffusion Distillation},
+  author={Sauer, Axel and Lorenz, Dominik and Blattmann, Andreas and Rombach, Robin},
+  journal={arXiv preprint arXiv:2311.17042},
+  year={2023}
+}
 ```
-## Other ways of using InstructPix2Pix
-
-### InstructPix2Pix on [HuggingFace](https://huggingface.co/spaces/timbrooks/instruct-pix2pix):
-> A browser-based version of the demo is available as a [HuggingFace space](https://huggingface.co/spaces/timbrooks/instruct-pix2pix). For this version, you only need a browser, a picture you want to edit, and an instruction! Note that this is a shared online demo, and processing time may be slower during peak utilization. 
-
-### InstructPix2Pix on [Replicate](https://replicate.com/timothybrooks/instruct-pix2pix):
-> Replicate provides a production-ready cloud API for running the InstructPix2Pix model. You can run the model from any environment using a simple API call with cURL, Python, JavaScript, or your language of choice. Replicate also provides a web interface for running the model and sharing predictions.
-
-### InstructPix2Pix in [Imaginairy](https://github.com/brycedrennan/imaginAIry#-edit-images-with-instructions-alone-by-instructpix2pix):
-> Imaginairy offers another way of easily installing InstructPix2Pix with a single command. It can run on devices without GPUs (like a Macbook!). 
-> ```bash
-> pip install imaginairy --upgrade
-> aimg edit any-image.jpg --gif "turn him into a cyborg" 
-> ```
-> It also offers an easy way to perform a bunch of edits on an image, and can save edits out to an animated GIF:
-> ```
-> aimg edit --gif --surprise-me pearl-earring.jpg 
-> ```
-> <img src="https://raw.githubusercontent.com/brycedrennan/imaginAIry/7c05c3aae2740278978c5e84962b826e58201bac/assets/girl_with_a_pearl_earring_suprise.gif" width="512">
-
-### InstructPix2Pix in [🧨 Diffusers](https://github.com/huggingface/diffusers):
-
-> InstructPix2Pix in Diffusers is a bit more optimized, so it may be faster and more suitable for GPUs with less memory. Below are instructions for installing the library and editing an image: 
-> 1. Install diffusers and relevant dependencies:
->
-> ```bash
-> pip install transformers accelerate torch
->
-> pip install git+https://github.com/huggingface/diffusers.git
-> ```
-> 
-> 2. Load the model and edit the image:
->
-> ```python
-> 
-> import torch
-> from diffusers import StableDiffusionInstructPix2PixPipeline, EulerAncestralDiscreteScheduler
-> 
-> model_id = "timbrooks/instruct-pix2pix"
-> pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16, safety_checker=None)
-> pipe.to("cuda")
-> pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config)
-> # `image` is an RGB PIL.Image
-> images = pipe("turn him into cyborg", image=image).images
-> images[0]
-> ```
-> 
-> For more information, check the docs [here](https://huggingface.co/docs/diffusers/main/en/api/pipelines/stable_diffusion/pix2pix).
